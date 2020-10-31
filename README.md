@@ -1,2 +1,4 @@
 # graphql-phonebook
-A phonebook based on GraphQL and React
+A phonebook using GraphQL and React.
+
+Based on https://fullstackopen.com/en/part8/
