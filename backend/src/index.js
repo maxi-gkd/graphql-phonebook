@@ -1,4 +1,4 @@
-const { ApolloServer, gql } = require('apollo-server')
+const { ApolloServer, UserInputError, gql } = require('apollo-server')
 const { v1: uuid } = require('uuid')
 
 let persons = [
@@ -91,7 +91,7 @@ const resolvers = {
           invalidArgs: args.name,
         })
       }
-
+      
       const person = { ...args, id: uuid() }
       persons = persons.concat(person)
       return person
