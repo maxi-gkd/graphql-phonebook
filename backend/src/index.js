@@ -1,12 +1,14 @@
 const dotenv = require('dotenv');
 const { ApolloServer, UserInputError, gql } = require('apollo-server')
-const  Logging  = require('./log')
+const { PubSub } = require('apollo-server')
+const pubsub = new PubSub()
+const jwt = require('jsonwebtoken');
+
+const mongo = require('./mongo')
+const LogPlugin = require('./log');
 
 const Person = require('./models/person')
 const User = require('./models/user')
-const mongo = require('./mongo')
-const jwt = require('jsonwebtoken');
-const LogPlugin = require('./log');
 
 dotenv.config();
 
@@ -27,6 +29,7 @@ type Person {
   name: String!
   phone: String
   address: Address!
+  friendOf: [User!]!
   id: ID!
 }
 
@@ -39,6 +42,10 @@ type User {
 type Token {
   value: String!
 }
+
+type Subscription {
+  personAdded: Person!
+}  
 
 type Query {
   personCount: Int!
@@ -76,10 +83,11 @@ const resolvers = {
     personCount: () => Person.collection.countDocuments(),
     allPersons: (root, args) => {
       if (!args.phone) {
-        return Person.find({})
+        return Person.find({}).populate('friendOf')
       }
 
       return Person.find({ phone: { $exists: args.phone === 'YES' } })
+        .populate('friendOf')
     },
     findPerson: (root, args) => Person.findOne({ name: args.name }),
     me: (root, args, context) => {
@@ -92,6 +100,15 @@ const resolvers = {
         street: root.street,
         city: root.city
       }
+    },
+    friendOf: async (root) => {
+      const friends = await User.find({
+        friends: {
+          $in: [root._id]
+        }
+      })
+
+      return friends
     }
   },
   Mutation: {
@@ -113,23 +130,25 @@ const resolvers = {
         })
       }
 
+      pubsub.publish('PERSON_ADDED', { personAdded: person })
+
       return person
     },
     addAsFriend: async (root, args, { currentUser }) => {
-      const nonFriendAlready = (person) => 
+      const nonFriendAlready = (person) =>
         !currentUser.friends.map(f => f._id).includes(person._id)
-  
+
       if (!currentUser) {
         throw new AuthenticationError("not authenticated")
       }
-  
+
       const person = await Person.findOne({ name: args.name })
-      if ( nonFriendAlready(person) ) {
+      if (nonFriendAlready(person)) {
         currentUser.friends = currentUser.friends.concat(person)
       }
-  
+
       await currentUser.save()
-  
+
       return currentUser
     },
     editNumber: async (root, args) => {
@@ -169,7 +188,12 @@ const resolvers = {
 
       return { value: jwt.sign(userForToken, jwtSecret) }
     },
-  }
+  },
+  Subscription: {
+    personAdded: {
+      subscribe: () => pubsub.asyncIterator(['PERSON_ADDED'])
+    },
+  },
 }
 
 const server = new ApolloServer({
@@ -188,6 +212,7 @@ const server = new ApolloServer({
   plugins: [LogPlugin]
 })
 
-server.listen().then(({ url }) => {
+server.listen().then(({ url, subscriptionsUrl }) => {
   console.log(`Server ready at ${url}`)
+  console.log(`Subscriptions ready at ${subscriptionsUrl}`)
 })
