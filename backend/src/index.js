@@ -1,9 +1,12 @@
 const dotenv = require('dotenv');
 const { ApolloServer, UserInputError, gql } = require('apollo-server')
+const  Logging  = require('./log')
+
 const Person = require('./models/person')
 const User = require('./models/user')
 const mongo = require('./mongo')
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const LogPlugin = require('./log');
 
 dotenv.config();
 
@@ -176,12 +179,13 @@ const server = new ApolloServer({
     const auth = req ? req.headers.authorization : null
     if (auth && auth.toLowerCase().startsWith('bearer ')) {
       const decodedToken = jwt.verify(
-        auth.substring(7), JWT_SECRET
+        auth.substring(7), jwtSecret
       )
       const currentUser = await User.findById(decodedToken.id).populate('friends')
       return { currentUser }
     }
-  }
+  },
+  plugins: [LogPlugin]
 })
 
 server.listen().then(({ url }) => {

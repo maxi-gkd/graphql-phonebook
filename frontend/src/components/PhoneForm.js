@@ -7,7 +7,12 @@ const PhoneForm = ({ setError }) => {
     const [name, setName] = useState('')
     const [phone, setPhone] = useState('')
 
-    const [changeNumber, result] = useMutation(EDIT_NUMBER)
+    const [changeNumber, result] = useMutation(EDIT_NUMBER,
+        {
+            onError: (error) => {
+                setError(error.graphQLErrors[0].message)
+            }
+        })
 
     const submit = (event) => {
         event.preventDefault()
@@ -20,9 +25,9 @@ const PhoneForm = ({ setError }) => {
 
     useEffect(() => {
         if (result.data && !result.data.editNumber) {
-          setError('name not found')
+            setError('name not found')
         }
-      }, [result.data])  // eslint-disable-line 
+    }, [result.data])  // eslint-disable-line 
 
     return (
         <div>

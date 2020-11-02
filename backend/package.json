@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/maxi-gkd/graphql-phonebook#readme",
   "dependencies": {
-    "apollo-server": "^2.18.2",
+    "apollo-server": "^2.19.0",
     "dotenv": "^8.2.0",
     "graphql": "^15.3.0",
     "jsonwebtoken": "^8.5.1",
